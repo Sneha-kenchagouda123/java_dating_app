@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dating App</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align content to the top */
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #6a1b9a;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #4a148c;
+            font-size: 2rem;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        /* Form Styles */
+        form {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #6a1b9a;
+            outline: none;
+            box-shadow: 0 0 8px rgba(106, 27, 154, 0.3);
+        }
+
+        button {
+            background-color: #6a1b9a;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #4a148c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(106, 27, 154, 0.3);
+        }
+
+        /* Recommendations Section */
+        #recommendationsSection {
+            display: none; /* Hidden by default */
+            max-width: 800px;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #6a1b9a;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            form {
+                padding: 20px;
+            }
+
+            input, button {
+                padding: 12px;
+                font-size: 0.9rem;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Dating App</h1>
+    <form id="userForm">
+        <input type="text" id="name" placeholder="Name" required>
+        <input type="text" id="gender" placeholder="Gender" required>
+        <input type="number" id="age" placeholder="Age" required>
+        <input type="text" id="interests" placeholder="Interests (comma-separated)" required>
+        <button type="submit">Get Recommendations</button>
+    </form>
+
+    <!-- Recommendations Section -->
+    <div id="recommendationsSection">
+        <h2>Recommendations</h2>
+        <table id="recommendationsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Interests</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Recommendations will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Get form values
+            const name = document.getElementById('name').value;
+            const gender = document.getElementById('gender').value;
+            const age = parseInt(document.getElementById('age').value);
+            const interests = document.getElementById('interests').value.split(',').map(i => i.trim());
+
+            // Input validation
+            if (!name || !gender || !age || !interests.length) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            if (age <= 0) {
+                alert("Age must be a positive number.");
+                return;
+            }
+
+            const user = { name, gender, age, interests };
+
+            try {
+                // Show loading state
+                const submitButton = document.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.textContent = "Loading...";
+
+                // Register the user
+                const registerResponse = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
+
+                if (!registerResponse.ok) {
+                    throw new Error('Failed to register user');
+                }
+
+                const registeredUser = await registerResponse.json();
+                console.log("Registered User:", registeredUser);
+
+                // Fetch recommendations for the registered user
+                const recommendationsResponse = await fetch(`/api/users/recommendations/${registeredUser.id}`);
+
+                if (!recommendationsResponse.ok) {
+                    throw new Error('Failed to fetch recommendations');
+                }
+
+                const recommendations = await recommendationsResponse.json();
+
+                // Display recommendations in the table
+                const recommendationsTable = document.getElementById('recommendationsTable').getElementsByTagName('tbody')[0];
+                recommendationsTable.innerHTML = recommendations.map(u => `
+                    <tr>
+                        <td>${u.name}</td>
+                        <td>${u.age}</td>
+                        <td>${u.gender}</td>
+                        <td>${u.interests.join(', ')}</td>
+                    </tr>
+                `).join('');
+
+                // Show the recommendations section
+                document.getElementById('recommendationsSection').style.display = 'block';
+
+                // Scroll to the recommendations section
+                document.getElementById('recommendationsSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred. Please check the console for details.");
+            } finally {
+                // Reset button state
+                const submitButton = document.querySelector('button[type="submit"]');
+                submitButton.disabled = false;
+                submitButton.textContent = "Get Recommendations";
+            }
+        });
+    </script>
+</body>
+</html>
